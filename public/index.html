@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>UNO — Play Online</title>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+/* ═══════════════════════ VARIABLES ═══════════════════════ */
+:root {
+  --red:    #E8294A;
+  --yellow: #F5C518;
+  --green:  #2ECC71;
+  --blue:   #3498DB;
+  --purple: #9B59B6;
+  --bg:     #080814;
+  --surface:#131324;
+  --surface2:#1a1a30;
+  --surface3:#22223a;
+  --text:   #f0f0ff;
+  --muted:  #7070a0;
+  --border: #ffffff0f;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+html,body{width:100%;height:100%;overflow:hidden}
+
+body {
+  font-family:'Nunito',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% 0%,   #1a0a3a 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, #0a1a3a 0%, transparent 70%);
+}
+
+/* ═══════════════════════ SCREENS ═══════════════════════ */
+.screen{display:none;width:100%;height:100%;overflow:hidden}
+.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center}
+
+/* ═══════════════════════ LOBBY ═══════════════════════ */
+#lobby-screen{gap:0;padding:2rem;overflow-y:auto}
+
+.logo {
+  font-family:'Bangers',cursive;
+  font-size:clamp(5rem,15vw,8rem);
+  letter-spacing:.06em;
+  line-height:1;
+  background:linear-gradient(135deg,var(--red) 0%,var(--yellow) 40%,var(--green) 70%,var(--blue) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 4px 28px #e8294a66);
+  animation:logoPulse 3s ease-in-out infinite;
+  margin-bottom:.15em;
+}
+@keyframes logoPulse{
+  0%,100%{filter:drop-shadow(0 4px 28px #e8294a66)}
+  33%{filter:drop-shadow(0 4px 28px #f5c51866)}
+  66%{filter:drop-shadow(0 4px 28px #3498db66)}
+}
+
+.subtitle{color:var(--muted);font-size:.9rem;font-weight:700;margin-bottom:2rem;letter-spacing:.05em}
+
+.lobby-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:24px;
+  padding:2.2rem;
+  width:100%;max-width:400px;
+  box-shadow:0 24px 80px #00000080;
+}
+.lobby-card h2{
+  font-family:'Bangers',cursive;font-size:1.7rem;letter-spacing:.05em;
+  color:var(--yellow);margin-bottom:1.4rem;text-align:center;
+}
+
+.input-group{display:flex;flex-direction:column;gap:.45rem;margin-bottom:1.1rem}
+.input-group label{font-size:.78rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.input-group input{
+  background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;
+  padding:.8rem 1rem;color:var(--text);font-family:'Nunito',sans-serif;
+  font-size:.95rem;font-weight:700;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.input-group input:focus{border-color:var(--red);box-shadow:0 0 0 3px #e8294a22}
+
+.btn{
+  width:100%;padding:.85rem;border:none;border-radius:12px;
+  font-family:'Bangers',cursive;font-size:1.3rem;letter-spacing:.08em;
+  cursor:pointer;transition:transform .15s,box-shadow .15s,filter .15s;
+}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--red),#c0392b);color:#fff;box-shadow:0 6px 24px #e8294a55}
+.btn-primary:hover{filter:brightness(1.12);transform:translateY(-2px);box-shadow:0 10px 32px #e8294a77}
+.btn-green{background:linear-gradient(135deg,var(--green),#27ae60);color:#fff;box-shadow:0 6px 24px #2ecc7155}
+.btn-green:hover{filter:brightness(1.12);transform:translateY(-2px)}
+.btn-yellow{background:linear-gradient(135deg,var(--yellow),#d4ac0d);color:#111;box-shadow:0 6px 24px #f5c51855}
+.btn-yellow:hover{filter:brightness(1.1);transform:translateY(-2px)}
+
+/* ═══════════════════════ WAITING ROOM ═══════════════════════ */
+#waiting-screen{padding:2rem;overflow-y:auto}
+.waiting-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:24px;
+  padding:2.2rem;width:100%;max-width:460px;text-align:center;
+}
+.waiting-card h2{font-family:'Bangers',cursive;font-size:1.7rem;letter-spacing:.05em;color:var(--yellow);margin-bottom:.4rem}
+.waiting-info{color:var(--muted);font-size:.82rem;font-weight:700;margin-bottom:.8rem}
+
+.room-code{
+  background:var(--surface2);border:2px dashed #ffffff1a;border-radius:16px;
+  padding:1rem;margin:1rem 0;
+}
+.room-code-label{font-size:.7rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.15em;margin-bottom:.3rem}
+.room-code-value{font-family:'Bangers',cursive;font-size:2.8rem;letter-spacing:.2em;color:var(--yellow);text-shadow:0 0 20px #f5c51866}
+.copy-btn{
+  background:#ffffff13;border:none;border-radius:8px;color:var(--muted);
+  padding:.25rem .75rem;font-size:.78rem;cursor:pointer;margin-top:.4rem;
+  transition:background .2s,color .2s;
+}
+.copy-btn:hover{background:#ffffff22;color:var(--text)}
+
+.player-list{list-style:none;margin:1.2rem 0;display:flex;flex-direction:column;gap:.5rem;text-align:left}
+.player-list-item{
+  display:flex;align-items:center;gap:.75rem;
+  background:var(--surface2);border-radius:12px;padding:.65rem .9rem;font-weight:700;
+}
+.player-avatar{
+  width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:'Bangers',cursive;font-size:1rem;color:#fff;flex-shrink:0;
+}
+.host-badge{
+  margin-left:auto;background:var(--yellow);color:#111;
+  font-size:.6rem;font-weight:900;padding:.2rem .5rem;border-radius:6px;
+  text-transform:uppercase;letter-spacing:.1em;
+}
+#guest-waiting{color:var(--muted);font-size:.82rem;font-weight:700;margin-top:.6rem}
+
+/* ═══════════════════════ GAME SCREEN ═══════════════════════ */
+#game-screen{
+  flex-direction:column;justify-content:flex-start;
+  width:100%;height:100%;overflow:hidden;position:relative;
+}
+
+.game-layout{
+  display:grid;
+  grid-template-rows:52px 1fr auto auto;
+  width:100%;height:100%;
+  max-width:1100px;margin:0 auto;
+  padding:.6rem;gap:.5rem;
+}
+
+/* ── Top bar ── */
+.top-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.5rem 1rem;background:var(--surface);
+  border-radius:14px;border:1px solid var(--border);
+  flex-shrink:0;
+}
+.top-bar-logo{
+  font-family:'Bangers',cursive;font-size:1.7rem;
+  background:linear-gradient(135deg,var(--red),var(--yellow));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  letter-spacing:.05em;
+}
+.turn-pill{
+  padding:.35rem 1rem;border-radius:999px;font-weight:800;font-size:.82rem;
+  transition:all .3s;
+}
+.turn-pill.my-turn{
+  background:linear-gradient(135deg,var(--green),#27ae60);color:#fff;
+  box-shadow:0 0 20px #2ecc7166;
+  animation:turnPulse 1.4s ease-in-out infinite;
+}
+@keyframes turnPulse{0%,100%{box-shadow:0 0 16px #2ecc7166}50%{box-shadow:0 0 36px #2ecc71aa}}
+.turn-pill.others-turn{background:var(--surface2);color:var(--muted)}
+.room-label{font-size:.72rem;font-weight:800;color:var(--muted)}
+
+/* ═══════════════════════ CIRCLE ARENA ═══════════════════════ */
+.arena{
+  position:relative;flex:1;min-height:0;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* SVG circle sits behind everything */
+#circle-svg{
+  position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none;overflow:visible;
+}
+
+/* player chips positioned absolutely by JS */
+.player-chip{
+  position:absolute;
+  transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:6px 8px;border-radius:14px;
+  background:var(--surface2);border:2px solid transparent;
+  transition:border-color .3s,box-shadow .3s,background .3s;
+  min-width:66px;cursor:default;
+  z-index:5;
+}
+.player-chip.active-player{
+  border-color:var(--yellow);
+  box-shadow:0 0 24px #f5c51844;
+  background:var(--surface3);
+  animation:chipBeat .9s ease-in-out infinite;
+}
+@keyframes chipBeat{0%,100%{box-shadow:0 0 16px #f5c51844}50%{box-shadow:0 0 36px #f5c518aa}}
+.p-avatar{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Bangers',cursive;font-size:1.1rem;color:#fff;
+  flex-shrink:0;position:relative;
+}
+.p-name{font-size:.65rem;font-weight:800;text-align:center;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-cards{
+  background:var(--surface);border-radius:999px;
+  padding:.1rem .45rem;font-size:.65rem;font-weight:900;color:var(--muted);
+}
+.active-player .p-cards{background:var(--yellow);color:#111}
+.uno-badge-chip{
+  position:absolute;top:-8px;right:-8px;
+  background:var(--red);color:#fff;
+  font-family:'Bangers',cursive;font-size:.65rem;
+  padding:.1rem .35rem;border-radius:999px;
+  box-shadow:0 0 10px #e8294a99;
+  animation:unoBadge .6s ease-in-out infinite alternate;
+}
+@keyframes unoBadge{from{transform:scale(1)}to{transform:scale(1.2)}}
+.catch-btn-chip{
+  background:var(--red);border:none;border-radius:8px;color:#fff;
+  font-family:'Bangers',cursive;font-size:.7rem;padding:.15rem .45rem;
+  cursor:pointer;letter-spacing:.04em;margin-top:1px;
+  transition:filter .15s,transform .15s;
+}
+.catch-btn-chip:hover{filter:brightness(1.25);transform:scale(1.05)}
+
+/* ── Center pile area ── */
+.center-piles{
+  position:absolute;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  display:flex;align-items:center;gap:1.4rem;
+  z-index:4;
+}
+
+/* ═══════════════════════ CARDS ═══════════════════════ */
+.card{
+  width:68px;height:104px;border-radius:12px;
+  position:relative;cursor:default;
+  transition:transform .2s,box-shadow .2s,filter .2s;
+  flex-shrink:0;user-select:none;
+}
+.card.playable{
+  cursor:pointer;
+  box-shadow:0 0 0 3px rgba(255,255,255,.7),0 6px 24px rgba(255,255,255,.2);
+}
+.card.playable:hover{
+  transform:translateY(-14px) rotate(3deg);
+  box-shadow:0 0 0 3px #fff,0 14px 40px rgba(255,255,255,.4);
+  z-index:10;
+}
+.card.dimmed{filter:brightness(.55) saturate(.5)}
+.card-inner{
+  width:100%;height:100%;border-radius:11px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+  border:2.5px solid rgba(255,255,255,.35);
+}
+.card[data-color=red]    .card-inner{background:linear-gradient(145deg,#e8294a,#c0392b)}
+.card[data-color=yellow] .card-inner{background:linear-gradient(145deg,#f5c518,#d4ac0d)}
+.card[data-color=green]  .card-inner{background:linear-gradient(145deg,#2ecc71,#27ae60)}
+.card[data-color=blue]   .card-inner{background:linear-gradient(145deg,#3498db,#1a5276)}
+.card[data-color=wild]   .card-inner{
+  background:conic-gradient(from 0deg,#e8294a 0deg 90deg,#f5c518 90deg 180deg,#2ecc71 180deg 270deg,#3498db 270deg);
+}
+.card-back .card-inner{
+  background:linear-gradient(145deg,#1a1a2e,#252545);
+  border-color:rgba(255,255,255,.12);
+}
+.card-oval{
+  width:52px;height:76px;border-radius:50%;
+  background:rgba(255,255,255,.18);
+  position:absolute;transform:rotate(-30deg);
+}
+.card-sym{
+  font-family:'Bangers',cursive;font-size:1.8rem;color:#fff;
+  text-shadow:0 2px 6px rgba(0,0,0,.5);position:relative;z-index:1;line-height:1;
+}
+.card[data-color=yellow] .card-sym{color:#1a1a1a}
+.card-corner{
+  position:absolute;font-family:'Bangers',cursive;font-size:.78rem;color:#fff;line-height:1;
+}
+.card[data-color=yellow] .card-corner{color:#1a1a1a}
+.card-corner.tl{top:4px;left:6px}
+.card-corner.br{bottom:4px;right:6px;transform:rotate(180deg)}
+.card-back .card-sym{
+  font-size:2rem;
+  background:linear-gradient(135deg,var(--red),var(--yellow),var(--green),var(--blue));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+
+/* Discard */
+.discard-wrap{position:relative;width:76px;height:110px}
+.discard-wrap .card{position:absolute;inset:0;width:100%;height:100%;cursor:default}
+.discard-wrap .card .card-inner{border-width:3px}
+.draw-badge{
+  position:absolute;top:-10px;right:-10px;
+  background:var(--red);color:#fff;font-family:'Bangers',cursive;
+  font-size:.9rem;padding:.1rem .45rem;border-radius:999px;
+  box-shadow:0 0 14px #e8294aaa;z-index:5;
+}
+
+/* Deck */
+.deck-wrap{position:relative;width:76px;height:110px;cursor:pointer}
+.deck-wrap .card{position:absolute;width:100%;height:100%}
+.deck-wrap .card:nth-child(1){top:-3px;left:-3px}
+.deck-wrap .card:nth-child(2){top:-1.5px;left:-1.5px}
+.deck-wrap .card:nth-child(3){top:0;left:0}
+.deck-count{
+  position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);
+  font-size:.7rem;font-weight:800;color:var(--muted);white-space:nowrap;
+}
+
+/* Color ring */
+.color-ring{
+  width:52px;height:52px;border-radius:50%;
+  border:3.5px solid rgba(255,255,255,.25);
+  transition:background .4s,box-shadow .4s;
+}
+.color-ring.red   {background:var(--red);   box-shadow:0 0 22px #e8294aaa}
+.color-ring.yellow{background:var(--yellow);box-shadow:0 0 22px #f5c518aa}
+.color-ring.green {background:var(--green); box-shadow:0 0 22px #2ecc71aa}
+.color-ring.blue  {background:var(--blue);  box-shadow:0 0 22px #3498dbaa}
+.color-ring-label{font-size:.65rem;font-weight:800;color:var(--muted);text-align:center;margin-top:4px}
+
+/* ═══════════════════════ MY HAND ═══════════════════════ */
+.my-hand-wrap{
+  display:flex;flex-direction:column;align-items:center;gap:.4rem;
+  flex-shrink:0;padding:.2rem 0;
+}
+.hand-label{font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
+.hand-cards{
+  display:flex;align-items:flex-end;justify-content:center;
+  flex-wrap:wrap;gap:5px;
+  min-height:114px;padding:.3rem .5rem;
+}
+.hand-cards .card{width:62px;height:96px}
+.hand-cards .card .card-inner{border-width:2px}
+
+/* ═══════════════════════ BOTTOM ACTIONS ═══════════════════════ */
+.bottom-actions{
+  display:flex;align-items:center;justify-content:center;
+  gap:.6rem;flex-wrap:wrap;padding:.2rem 0 .4rem;
+  flex-shrink:0;
+}
+.action-btn{
+  padding:.5rem 1.2rem;border:none;border-radius:10px;
+  font-family:'Bangers',cursive;font-size:1rem;letter-spacing:.07em;
+  cursor:pointer;transition:transform .15s,filter .15s;
+}
+.action-btn:hover{filter:brightness(1.15);transform:translateY(-2px)}
+.action-btn:active{transform:scale(.96)}
+.action-btn:disabled{opacity:.38;cursor:not-allowed;transform:none;filter:none}
+.uno-btn{
+  background:linear-gradient(135deg,var(--red),#c0392b);color:#fff;
+  font-size:1.3rem;box-shadow:0 4px 18px #e8294a55;
+  padding:.5rem 1.8rem;
+}
+.uno-btn:not(:disabled){animation:unoBtnPulse 1.2s ease-in-out infinite}
+@keyframes unoBtnPulse{0%,100%{box-shadow:0 4px 18px #e8294a55}50%{box-shadow:0 4px 32px #e8294aaa}}
+.pass-btn{background:var(--surface2);color:var(--muted);border:1.5px solid var(--border)}
+
+/* ═══════════════════════ OVERLAYS ═══════════════════════ */
+.overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(8px);
+  z-index:100;align-items:center;justify-content:center;
+}
+.overlay.open{display:flex}
+
+.modal{
+  background:var(--surface);border-radius:24px;padding:2rem;
+  border:1px solid #ffffff13;box-shadow:0 24px 80px #00000088;
+  text-align:center;
+}
+.modal h3{font-family:'Bangers',cursive;font-size:1.7rem;letter-spacing:.05em;margin-bottom:1.2rem;color:var(--text)}
+
+/* Color picker */
+.color-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+.color-opt{
+  width:88px;height:88px;border-radius:16px;border:3px solid rgba(255,255,255,.2);
+  cursor:pointer;transition:transform .15s,box-shadow .15s;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Bangers',cursive;font-size:1.1rem;color:#fff;
+  text-shadow:0 2px 6px rgba(0,0,0,.5);
+}
+.color-opt:hover{transform:scale(1.1)}
+.color-opt.red   {background:var(--red);   box-shadow:0 6px 20px #e8294a66}
+.color-opt.yellow{background:var(--yellow);color:#111;text-shadow:none;box-shadow:0 6px 20px #f5c51866}
+.color-opt.green {background:var(--green); box-shadow:0 6px 20px #2ecc7166}
+.color-opt.blue  {background:var(--blue);  box-shadow:0 6px 20px #3498db66}
+
+/* Swap target picker */
+.swap-grid{display:flex;flex-direction:column;gap:.6rem;margin-top:.5rem}
+.swap-opt{
+  display:flex;align-items:center;gap:.8rem;
+  background:var(--surface2);border-radius:12px;padding:.65rem 1rem;
+  cursor:pointer;border:2px solid transparent;
+  transition:border-color .2s,background .2s;font-weight:700;
+}
+.swap-opt:hover{border-color:var(--yellow);background:var(--surface3)}
+.swap-opt-avatar{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Bangers',cursive;font-size:.95rem;color:#fff;
+  flex-shrink:0;
+}
+.swap-cards-count{margin-left:auto;font-size:.75rem;color:var(--muted);font-weight:800}
+
+/* Winner */
+.winner-modal{max-width:360px;width:90%}
+.winner-emoji{font-size:4rem;margin-bottom:.4rem}
+.winner-modal h2{
+  font-family:'Bangers',cursive;font-size:2.5rem;
+  color:var(--yellow);text-shadow:0 0 20px #f5c51866;margin-bottom:.4rem;
+}
+.winner-modal p{color:var(--muted);margin-bottom:1.4rem;font-weight:600}
+
+/* ═══════════════════════ TOAST ═══════════════════════ */
+#toast-container{
+  position:fixed;top:1rem;left:50%;transform:translateX(-50%);
+  z-index:200;display:flex;flex-direction:column;align-items:center;gap:.4rem;
+  pointer-events:none;
+}
+.toast{
+  background:var(--surface);border:1px solid #ffffff1a;border-radius:12px;
+  padding:.6rem 1.2rem;font-weight:800;font-size:.85rem;
+  box-shadow:0 8px 32px #00000066;white-space:nowrap;
+  animation:toastIn .3s ease, toastOut .3s ease 2.7s forwards;
+}
+.toast.success{border-color:var(--green);color:#5dce8a}
+.toast.error  {border-color:var(--red);  color:#f07070}
+.toast.info   {border-color:var(--blue); color:#70a8f0}
+.toast.warning{border-color:var(--yellow);color:var(--yellow)}
+@keyframes toastIn {from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0}}
+
+/* ═══════════════════════ CARD PLAY ANIMATION ═══════════════════════ */
+.card-fly{
+  position:fixed;z-index:300;pointer-events:none;
+  animation:cardFly .45s cubic-bezier(.2,.8,.4,1) forwards;
+}
+@keyframes cardFly{
+  from{transform:translate(0,0) scale(1);opacity:1}
+  to{transform:translate(var(--tx),var(--ty)) scale(.6);opacity:0}
+}
+
+/* Draw animation */
+@keyframes drawBounce{
+  0%{transform:translateY(0)}
+  40%{transform:translateY(-8px)}
+  100%{transform:translateY(0)}
+}
+.draw-anim{animation:drawBounce .35s ease}
+
+/* ═══════════════════════ RESPONSIVE ═══════════════════════ */
+@media(max-width:600px){
+  .card{width:56px;height:88px}
+  .card .card-sym{font-size:1.4rem}
+  .hand-cards .card{width:52px;height:80px}
+  .discard-wrap{width:64px;height:96px}
+  .deck-wrap{width:64px;height:96px}
+}
+</style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<!-- ════════════════ LOBBY ════════════════ -->
+<div id="lobby-screen" class="screen active">
+  <div class="logo">UNO</div>
+  <p class="subtitle">Classic card chaos — play online with friends 🃏</p>
+  <div class="lobby-card">
+    <h2>Join or Create a Room</h2>
+    <div class="input-group">
+      <label>Your Name</label>
+      <input id="player-name" type="text" placeholder="Enter your nickname" maxlength="18" autocomplete="off"/>
+    </div>
+    <div class="input-group">
+      <label>Room Code (blank = create new room)</label>
+      <input id="room-code-input" type="text" placeholder="e.g. PIZZA" maxlength="12" autocomplete="off" style="text-transform:uppercase"/>
+    </div>
+    <button class="btn btn-primary" onclick="joinOrCreate()">🚀 Enter Room</button>
+  </div>
+</div>
+
+<!-- ════════════════ WAITING ROOM ════════════════ -->
+<div id="waiting-screen" class="screen">
+  <div class="waiting-card">
+    <h2>🃏 Waiting Room</h2>
+    <p class="waiting-info">Share the code with friends on Discord!</p>
+    <div class="room-code">
+      <div class="room-code-label">Room Code</div>
+      <div class="room-code-value" id="display-room-code">----</div>
+      <button class="copy-btn" onclick="copyCode()">📋 Copy Code</button>
+    </div>
+    <ul class="player-list" id="player-list"></ul>
+    <div id="host-controls" style="display:none">
+      <button class="btn btn-green" id="start-btn" onclick="startGame()" disabled>▶ Start Game</button>
+      <p style="font-size:.76rem;color:var(--muted);margin-top:.5rem;font-weight:700">Minimum 2 players required</p>
+    </div>
+    <div id="guest-waiting" style="display:none">⏳ Waiting for host to start…</div>
+  </div>
+</div>
+
+<!-- ════════════════ GAME SCREEN ════════════════ -->
+<div id="game-screen" class="screen">
+  <div class="game-layout">
+
+    <!-- Top bar -->
+    <div class="top-bar">
+      <div class="top-bar-logo">UNO</div>
+      <div class="turn-pill others-turn" id="turn-pill">Loading…</div>
+      <div class="room-label" id="room-label"></div>
+    </div>
+
+    <!-- Arena with circle layout -->
+    <div class="arena" id="arena">
+      <!-- SVG for circle + arrows -->
+      <svg id="circle-svg" viewBox="0 0 500 500" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow-head" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+            <path d="M0,1 L8,4 L0,7 Z" fill="#f5c518" opacity=".9"/>
+          </marker>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <!-- Circle track -->
+        <circle id="circle-track" cx="250" cy="250" r="170" fill="none"
+          stroke="#ffffff09" stroke-width="2" stroke-dasharray="6 8"/>
+        <!-- Direction arrows rendered by JS -->
+        <g id="direction-arrows"></g>
+      </svg>
+
+      <!-- Player chips positioned by JS -->
+      <div id="players-ring"></div>
+
+      <!-- Center piles -->
+      <div class="center-piles">
+        <div style="text-align:center">
+          <div class="color-ring" id="color-ring"></div>
+          <div class="color-ring-label" id="color-label">Color</div>
+        </div>
+        <div class="deck-wrap" id="deck-wrap" onclick="drawCard()">
+          <div class="card card-back"><div class="card-inner"><div class="card-sym">UNO</div></div></div>
+          <div class="card card-back"><div class="card-inner"><div class="card-sym">UNO</div></div></div>
+          <div class="card card-back"><div class="card-inner"><div class="card-sym">UNO</div></div></div>
+          <div class="deck-count" id="deck-count"></div>
+        </div>
+        <div class="discard-wrap" id="discard-wrap"></div>
+      </div>
+    </div>
+
+    <!-- My hand -->
+    <div class="my-hand-wrap">
+      <div class="hand-label">Your Hand</div>
+      <div class="hand-cards" id="hand-cards"></div>
+    </div>
+
+    <!-- Bottom actions -->
+    <div class="bottom-actions">
+      <button class="action-btn uno-btn" id="uno-btn" onclick="callUno()" disabled>UNO!</button>
+      <button class="action-btn pass-btn" id="pass-btn" onclick="passTurn()" disabled>Pass Turn</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ COLOR PICKER ════════════════ -->
+<div class="overlay" id="color-overlay">
+  <div class="modal">
+    <h3>Choose a Color</h3>
+    <div class="color-grid">
+      <div class="color-opt red"    onclick="pickColor('red')">Red</div>
+      <div class="color-opt yellow" onclick="pickColor('yellow')">Yellow</div>
+      <div class="color-opt green"  onclick="pickColor('green')">Green</div>
+      <div class="color-opt blue"   onclick="pickColor('blue')">Blue</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ SWAP TARGET PICKER ════════════════ -->
+<div class="overlay" id="swap-overlay">
+  <div class="modal">
+    <h3>🔀 Steal Whose Hand?</h3>
+    <p style="color:var(--muted);font-size:.82rem;font-weight:700;margin-bottom:.5rem">
+      Your hand will be swapped with theirs
+    </p>
+    <div class="swap-grid" id="swap-grid"></div>
+  </div>
+</div>
+
+<!-- ════════════════ WINNER ════════════════ -->
+<div class="overlay" id="winner-overlay">
+  <div class="modal winner-modal">
+    <div class="winner-emoji" id="winner-emoji">🏆</div>
+    <h2 id="winner-title"></h2>
+    <p id="winner-sub"></p>
+    <button class="btn btn-yellow" id="play-again-btn" onclick="playAgain()" style="display:none">🔄 Play Again</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════ AUDIO ENGINE ═══════════════════════ */
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+function resumeAC() { if (AC.state === 'suspended') AC.resume(); }
+document.addEventListener('click', resumeAC, { once: true });
+
+function playTone(freq, type, dur, vol=.18, delay=0) {
+  const o = AC.createOscillator();
+  const g = AC.createGain();
+  o.connect(g); g.connect(AC.destination);
+  o.type = type; o.frequency.value = freq;
+  const t = AC.currentTime + delay;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + .02);
+  g.gain.exponentialRampToValueAtTime(.001, t + dur);
+  o.start(t); o.stop(t + dur + .05);
+}
+
+const SFX = {
+  playCard() {
+    playTone(440,'sine',.12,.2);
+    playTone(660,'sine',.1,.15,.06);
+  },
+  draw() {
+    playTone(280,'triangle',.15,.15);
+    playTone(210,'triangle',.12,.1,.08);
+  },
+  yourTurn() {
+    playTone(523,'sine',.12,.2);
+    playTone(659,'sine',.12,.2,.12);
+    playTone(784,'sine',.18,.2,.24);
+  },
+  uno() {
+    playTone(880,'sawtooth',.05,.25);
+    playTone(1100,'sawtooth',.05,.25,.07);
+    playTone(880,'sawtooth',.12,.2,.14);
+  },
+  caught() {
+    playTone(200,'sawtooth',.3,.25);
+    playTone(150,'sawtooth',.3,.2,.1);
+  },
+  win() {
+    [523,659,784,1047].forEach((f,i)=>playTone(f,'sine',.3,.2,i*.12));
+  },
+  swap() {
+    playTone(600,'sine',.08,.2);
+    playTone(900,'sine',.08,.2,.1);
+    playTone(600,'sine',.12,.2,.2);
+  },
+  skip() { playTone(350,'square',.15,.18) },
+  reverse() {
+    playTone(440,'sine',.08,.2);
+    playTone(330,'sine',.12,.2,.1);
+  },
+  drawPenalty() {
+    [220,200,180,160].forEach((f,i)=>playTone(f,'sawtooth',.12,.18,i*.1));
+  },
+  error() { playTone(150,'sawtooth',.25,.2) },
+};
+
+/* ═══════════════════════ STATE ═══════════════════════ */
+const socket = io();
+let myId = null, myName = '', myRoomId = '', isHost = false;
+let gameState = null;
+let pendingCardIndex = null;
+let hasDrawnThisTurn = false;
+let drawnCardPlayable = false;
+let prevCurrentPlayerId = null;
+
+const AVATAR_COLORS = ['#e8294a','#f5c518','#2ecc71','#3498db','#9b59b6','#e67e22','#1abc9c','#e91e63','#00bcd4','#ff5722'];
+function avatarColor(name) {
+  let h = 0; for (const c of name) h = (h*31+c.charCodeAt(0))&0x7fffffff;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+
+/* ═══════════════════════ HELPERS ═══════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`; el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>el.remove(), 3100);
+}
+
+const SYM = {
+  '0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9',
+  skip:'⊘', reverse:'↺', draw2:'+2',
+  wild:'★', wild_draw4:'★+4', swap_hands:'⇄',
+};
+function cardSym(c) { return SYM[c.value] || c.value; }
+
+function makeCard(card, index=null, playable=false, dimmed=false) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.dataset.color = card.color === 'wild' ? 'wild' : card.color;
+  if (playable) el.classList.add('playable');
+  if (dimmed) el.classList.add('dimmed');
+  const sym = cardSym(card);
+  el.innerHTML = `<div class="card-inner">
+    <div class="card-oval"></div>
+    <div class="card-corner tl">${sym}</div>
+    <div class="card-sym">${sym}</div>
+    <div class="card-corner br">${sym}</div>
+  </div>`;
+  if (playable && index !== null) {
+    el.addEventListener('click', ()=>playCard(index, card));
+  }
+  return el;
+}
+
+/* ═══════════════════════ LOBBY ═══════════════════════ */
+function joinOrCreate() {
+  const name = document.getElementById('player-name').value.trim();
+  const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+  if (!name) { toast('Enter your name!', 'error'); SFX.error(); return; }
+  myName = name;
+  socket.emit('joinRoom', { roomId: code || genCode(), playerName: name });
+}
+
+function genCode() {
+  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s=''; for(let i=0;i<5;i++) s+=c[Math.floor(Math.random()*c.length)]; return s;
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(myRoomId).then(()=>toast('Code copied! 📋','success'));
+}
+
+/* ═══════════════════════ WAITING ROOM ═══════════════════════ */
+function renderWaiting(state) {
+  document.getElementById('display-room-code').textContent = myRoomId;
+  document.getElementById('host-controls').style.display = isHost ? 'block' : 'none';
+  document.getElementById('guest-waiting').style.display  = isHost ? 'none' : 'block';
+  const list = document.getElementById('player-list');
+  list.innerHTML = '';
+  state.players.forEach(p => {
+    const li = document.createElement('li');
+    li.className = 'player-list-item';
+    li.innerHTML = `
+      <div class="player-avatar" style="background:${avatarColor(p.name)}">${p.name[0].toUpperCase()}</div>
+      <span>${p.name}${p.id===myId?' (you)':''}</span>
+      ${p.id===state.host?'<span class="host-badge">Host</span>':''}`;
+    list.appendChild(li);
+  });
+  const sb = document.getElementById('start-btn');
+  if (sb) sb.disabled = state.players.length < 2;
+}
+
+function startGame() { socket.emit('startGame'); }
+
+/* ═══════════════════════ CIRCLE LAYOUT ═══════════════════════ */
+function renderCircle(state) {
+  const ring  = document.getElementById('players-ring');
+  const svgG  = document.getElementById('direction-arrows');
+  const arena = document.getElementById('arena');
+  ring.innerHTML = ''; svgG.innerHTML = '';
+
+  const W = arena.clientWidth  || 500;
+  const H = arena.clientHeight || 400;
+  const cx = W / 2, cy = H / 2;
+  const R  = Math.min(cx, cy) * 0.72;
+
+  const n = state.players.length;
+  // My index in the array
+  const myIdx = state.players.findIndex(p => p.id === myId);
+
+  state.players.forEach((p, i) => {
+    // Rotate so "me" is always at the bottom
+    const offset = myIdx >= 0 ? myIdx : 0;
+    const angle = (2 * Math.PI * (i - offset) / n) - Math.PI / 2;
+    const px = cx + R * Math.cos(angle);
+    const py = cy + R * Math.sin(angle);
+
+    const chip = document.createElement('div');
+    chip.className = 'player-chip';
+    if (p.isCurrentPlayer) chip.classList.add('active-player');
+    chip.style.left = px + 'px';
+    chip.style.top  = py + 'px';
+
+    const hasUno  = p.cardCount === 1;
+    const called  = state.unoCalled && state.unoCalled[p.id];
+    const canCatch= hasUno && !called && p.id !== myId;
+
+    chip.innerHTML = `
+      ${hasUno && !called && p.id !== myId ? '<div class="uno-badge-chip">UNO?</div>' : ''}
+      ${hasUno && called  ? '<div class="uno-badge-chip" style="background:var(--green)">UNO!</div>' : ''}
+      <div class="p-avatar" style="background:${avatarColor(p.name)}">${p.name[0].toUpperCase()}</div>
+      <div class="p-name">${p.name}${p.id===myId?' ★':''}</div>
+      <div class="p-cards">🃏 ${p.cardCount}</div>
+      ${canCatch?`<button class="catch-btn-chip" onclick="catchUno('${p.id}')">Catch!</button>`:''}`;
+    ring.appendChild(chip);
+
+    // Store position for arrow rendering
+    p._px = px; p._py = py;
+    p._angle = angle;
+  });
+
+  // Draw directional arrows on the circle arc
+  drawDirectionArrows(state, n, cx, cy, R, myIdx);
+}
+
+function drawDirectionArrows(state, n, cx, cy, R, myOffset) {
+  const svgEl = document.getElementById('circle-svg');
+  const svgW  = svgEl.clientWidth  || 500;
+  const svgH  = svgEl.clientHeight || 500;
+  // Map arena coords to SVG coords
+  const scaleX = svgW / (document.getElementById('arena').clientWidth  || svgW);
+  const scaleY = svgH / (document.getElementById('arena').clientHeight || svgH);
+  const scx = cx * scaleX, scy = cy * scaleY, sR = R * Math.min(scaleX, scaleY);
+
+  const svgG = document.getElementById('direction-arrows');
+  svgG.innerHTML = '';
+
+  // Draw arrows between each consecutive pair in current direction
+  const dir = state.direction; // 1 = CW, -1 = CCW
+  const currentIdx = state.players.findIndex(p => p.id === state.currentPlayerId);
+
+  for (let i = 0; i < n; i++) {
+    const from = (2 * Math.PI * (i - myOffset) / n) - Math.PI / 2;
+    const next = (i + 1) % n;
+    const to   = (2 * Math.PI * (next - myOffset) / n) - Math.PI / 2;
+
+    // Arc midpoint angle (go in the direction of play)
+    const midAngle = dir === 1
+      ? (from + to) / 2
+      : (to + from) / 2;
+
+    // We draw a short arrow tangent to the circle, pointing in direction of play
+    const arrowAng = dir === 1 ? midAngle + Math.PI/2 : midAngle - Math.PI/2;
+    const mx = scx + sR * Math.cos((from+to)/2);
+    const my = scy + sR * Math.sin((from+to)/2);
+    const len = 18;
+    const dx = Math.cos(arrowAng) * len;
+    const dy = Math.sin(arrowAng) * len;
+
+    // Highlight the arrow leading FROM the current player
+    const isActive = i === ((currentIdx - 0 + n) % n);
+    const opacity  = isActive ? 1.0 : 0.35;
+    const color    = isActive ? '#f5c518' : '#ffffff';
+    const sw       = isActive ? 3 : 1.5;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', mx - dx/2);
+    line.setAttribute('y1', my - dy/2);
+    line.setAttribute('x2', mx + dx/2);
+    line.setAttribute('y2', my + dy/2);
+    line.setAttribute('stroke', color);
+    line.setAttribute('stroke-width', sw);
+    line.setAttribute('stroke-opacity', opacity);
+    line.setAttribute('marker-end', 'url(#arrow-head)');
+    line.setAttribute('stroke-linecap', 'round');
+    if (isActive) {
+      const anim = document.createElementNS('http://www.w3.org/2000/svg','animateTransform');
+      anim.setAttribute('attributeName','transform');
+      anim.setAttribute('type','translate');
+      anim.setAttribute('values',`0,0; ${dx*0.15},${dy*0.15}; 0,0`);
+      anim.setAttribute('dur','1s');
+      anim.setAttribute('repeatCount','indefinite');
+      line.appendChild(anim);
+    }
+    svgG.appendChild(line);
+  }
+}
+
+/* ═══════════════════════ GAME RENDER ═══════════════════════ */
+function renderGame(state) {
+  gameState = state;
+  const me = state.players.find(p => p.id === myId);
+  if (!me) return;
+
+  const isMyTurn = state.currentPlayerId === myId;
+
+  // Detect turn change → play sound
+  if (prevCurrentPlayerId !== state.currentPlayerId) {
+    if (isMyTurn) SFX.yourTurn();
+    prevCurrentPlayerId = state.currentPlayerId;
+  }
+
+  // Turn pill
+  const pill = document.getElementById('turn-pill');
+  if (isMyTurn) {
+    pill.className = 'turn-pill my-turn';
+    pill.textContent = state.drawStack > 0 ? `⚠️ Draw ${state.drawStack} or Stack!` : '🎯 Your Turn!';
+  } else {
+    pill.className = 'turn-pill others-turn';
+    const cur = state.players.find(p=>p.id===state.currentPlayerId);
+    pill.textContent = `⏳ ${cur ? cur.name+"'s" : '?'} turn`;
+  }
+
+  document.getElementById('room-label').textContent = `Room: ${myRoomId}`;
+
+  // Color ring
+  const ring = document.getElementById('color-ring');
+  ring.className = `color-ring ${state.currentColor}`;
+  document.getElementById('color-label').textContent =
+    state.currentColor ? state.currentColor[0].toUpperCase()+state.currentColor.slice(1) : '';
+
+  // Discard pile
+  const dw = document.getElementById('discard-wrap');
+  dw.innerHTML = '';
+  if (state.topCard) {
+    const el = makeCard(state.topCard);
+    el.style.width='100%'; el.style.height='100%';
+    if (state.drawStack > 0) {
+      const b = document.createElement('div');
+      b.className='draw-badge'; b.textContent=`+${state.drawStack}`;
+      el.appendChild(b);
+    }
+    dw.appendChild(el);
+  }
+
+  document.getElementById('deck-count').textContent = `${state.deckSize ?? '?'} left`;
+
+  // Circle
+  renderCircle(state);
+
+  // Hand
+  renderHand(state, isMyTurn);
+
+  // ─── UNO BUTTON LOGIC (THE FIX) ───────────────────────────────────────────
+  // Enable UNO button whenever:
+  //   • It's your turn AND you have exactly 2 cards (you're about to go to 1), OR
+  //   • You currently have 1 card and haven't called UNO yet
+  const handSize = state.myHand.length;
+  const calledUno = state.unoCalled && state.unoCalled[myId];
+  const unoBtn = document.getElementById('uno-btn');
+  unoBtn.disabled = !(isMyTurn && (handSize === 1 || handSize === 2) && !calledUno);
+
+  // Pass button
+  const passBtn = document.getElementById('pass-btn');
+  passBtn.disabled = !(isMyTurn && hasDrawnThisTurn);
+}
+
+function renderHand(state, isMyTurn) {
+  const container = document.getElementById('hand-cards');
+  container.innerHTML = '';
+  const topCard = state.topCard;
+  const cc = state.currentColor;
+
+  state.myHand.forEach((card, i) => {
+    let playable = false;
+    if (isMyTurn) {
+      if (state.drawStack > 0) {
+        playable = card.value === 'wild_draw4' ||
+                   (card.value === 'draw2' && (topCard.value === 'draw2' || topCard.value === 'wild_draw4'));
+      } else {
+        playable = canPlayClient(card, topCard, cc);
+      }
+    }
+    // After drawing a non-playable card, only the last card matters
+    if (hasDrawnThisTurn && !drawnCardPlayable) {
+      playable = false;
+    } else if (hasDrawnThisTurn && drawnCardPlayable) {
+      playable = isMyTurn && (i === state.myHand.length - 1) && playable;
+    }
+
+    const dimmed = isMyTurn && !playable;
+    const el = makeCard(card, i, playable, dimmed && !hasDrawnThisTurn && state.drawStack === 0);
+    container.appendChild(el);
+  });
+}
+
+function canPlayClient(card, topCard, currentColor) {
+  if (!topCard) return true;
+  if (card.value === 'wild' || card.value === 'wild_draw4' || card.value === 'swap_hands') return true;
+  if (card.color === currentColor) return true;
+  if (card.value === topCard.value) return true;
+  return false;
+}
+
+/* ═══════════════════════ GAME ACTIONS ═══════════════════════ */
+function playCard(index, card) {
+  if (!gameState || gameState.currentPlayerId !== myId) return;
+  if (card.value === 'swap_hands') {
+    pendingCardIndex = index;
+    openSwapPicker();
+    return;
+  }
+  if (card.value === 'wild' || card.value === 'wild_draw4') {
+    pendingCardIndex = index;
+    document.getElementById('color-overlay').classList.add('open');
+    return;
+  }
+  SFX.playCard();
+  // Sound for special cards
+  if (card.value === 'skip') setTimeout(SFX.skip, 200);
+  else if (card.value === 'reverse') setTimeout(SFX.reverse, 200);
+  else if (card.value === 'draw2') setTimeout(()=>{SFX.draw();SFX.draw();}, 200);
+
+  socket.emit('playCard', { cardIndex: index });
+  hasDrawnThisTurn = false; drawnCardPlayable = false;
+}
+
+function openSwapPicker() {
+  const grid = document.getElementById('swap-grid');
+  grid.innerHTML = '';
+  if (!gameState) return;
+  gameState.players.filter(p => p.id !== myId).forEach(p => {
+    const opt = document.createElement('div');
+    opt.className = 'swap-opt';
+    opt.innerHTML = `
+      <div class="swap-opt-avatar" style="background:${avatarColor(p.name)}">${p.name[0].toUpperCase()}</div>
+      <span style="font-weight:800">${p.name}</span>
+      <span class="swap-cards-count">🃏 ${p.cardCount}</span>`;
+    opt.onclick = () => pickSwapTarget(p.id);
+    grid.appendChild(opt);
+  });
+  document.getElementById('swap-overlay').classList.add('open');
+}
+
+function pickSwapTarget(targetId) {
+  document.getElementById('swap-overlay').classList.remove('open');
+  SFX.swap();
+  socket.emit('playCard', { cardIndex: pendingCardIndex, swapTargetId: targetId });
+  pendingCardIndex = null;
+  hasDrawnThisTurn = false; drawnCardPlayable = false;
+  // Color overlay not needed for swap — server sets color to red by default,
+  // open color picker after so player can pick their preferred color
+  document.getElementById('color-overlay').classList.add('open');
+}
+
+function pickColor(color) {
+  document.getElementById('color-overlay').classList.remove('open');
+  if (pendingCardIndex !== null) {
+    // wild/wild_draw4 pending
+    SFX.playCard();
+    const card = gameState.myHand[pendingCardIndex];
+    if (card && card.value === 'wild_draw4') setTimeout(SFX.drawPenalty, 300);
+    socket.emit('playCard', { cardIndex: pendingCardIndex, chosenColor: color });
+    pendingCardIndex = null;
+    hasDrawnThisTurn = false; drawnCardPlayable = false;
+  } else {
+    // Color pick after swap — send a color-only update (server already played the card)
+    // We just re-use a separate event for post-swap color
+    socket.emit('setColor', { color });
+  }
+}
+
+function drawCard() {
+  if (!gameState || gameState.currentPlayerId !== myId) return;
+  SFX.draw();
+  if (gameState.drawStack > 0) SFX.drawPenalty();
+  socket.emit('drawCard');
+  hasDrawnThisTurn = true;
+}
+
+function passTurn() {
+  if (!hasDrawnThisTurn) return;
+  socket.emit('passTurn');
+  hasDrawnThisTurn = false; drawnCardPlayable = false;
+}
+
+function callUno() {
+  SFX.uno();
+  socket.emit('callUno');
+}
+
+function catchUno(targetId) {
+  socket.emit('catchUno', { targetId });
+}
+
+function playAgain() {
+  socket.emit('resetGame');
+  document.getElementById('winner-overlay').classList.remove('open');
+  hasDrawnThisTurn = false; drawnCardPlayable = false; prevCurrentPlayerId = null;
+}
+
+/* ═══════════════════════ SOCKET EVENTS ═══════════════════════ */
+socket.on('joined', ({ roomId, isHost: h, playerId }) => {
+  myId = playerId; myRoomId = roomId; isHost = h;
+  document.getElementById('display-room-code').textContent = roomId;
+  showScreen('waiting-screen');
+});
+
+socket.on('gameState', (state) => {
+  if (state.drawnCardPlayable !== undefined) {
+    drawnCardPlayable = state.drawnCardPlayable;
+  }
+
+  if (!state.started) {
+    renderWaiting(state);
+    showScreen('waiting-screen');
+    return;
+  }
+
+  // Reset draw state on new game
+  if (!gameState || !gameState.started) {
+    hasDrawnThisTurn = false; drawnCardPlayable = false; prevCurrentPlayerId = null;
+  }
+  // Reset draw flags on turn change
+  if (gameState && gameState.currentPlayerId !== state.currentPlayerId) {
+    hasDrawnThisTurn = false; drawnCardPlayable = false;
+  }
+
+  showScreen('game-screen');
+
+  if (state.winner) {
+    renderGame(state);
+    showWinner(state.winner);
+    return;
+  }
+
+  renderGame(state);
+});
+
+socket.on('error', msg => { toast(msg, 'error'); SFX.error(); });
+
+socket.on('unoCalled', ({ playerName, playerId }) => {
+  toast(`🚨 ${playerName} called UNO!`, 'warning');
+  if (playerId !== myId) SFX.uno();
+});
+
+socket.on('unoCaught', ({ catcher, target }) => {
+  toast(`😂 ${catcher} caught ${target} — +2 cards!`, 'warning');
+  SFX.caught();
+});
+
+socket.on('swapEvent', ({ swapper, target }) => {
+  toast(`🔀 ${swapper} stole ${target}'s hand!`, 'warning');
+  SFX.swap();
+});
+
+/* ═══════════════════════ WINNER ═══════════════════════ */
+function showWinner(name) {
+  SFX.win();
+  const isMe = name === myName;
+  document.getElementById('winner-emoji').textContent  = isMe ? '🏆' : '😔';
+  document.getElementById('winner-title').textContent  = isMe ? 'You Win!' : `${name} Wins!`;
+  document.getElementById('winner-sub').textContent    = isMe ? 'You played all your cards first!' : 'Better luck next round!';
+  document.getElementById('play-again-btn').style.display = isHost ? 'block' : 'none';
+  document.getElementById('winner-overlay').classList.add('open');
+}
+
+/* ═══════════════════════ RESIZE ═══════════════════════ */
+window.addEventListener('resize', () => {
+  if (gameState && gameState.started && !gameState.winner) renderCircle(gameState);
+});
+
+/* ═══════════════════════ KEYBOARD ═══════════════════════ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('lobby-screen').classList.contains('active')) joinOrCreate();
+  }
+  if ((e.key === 'u' || e.key === 'U') && !document.getElementById('uno-btn').disabled) callUno();
+});
+
+document.getElementById('room-code-input')?.addEventListener('input', function() {
+  this.value = this.value.toUpperCase();
+});
+
+/* ═══════════════════════ SERVER: handle setColor ═══════════════════════ */
+// Server needs to handle setColor for post-swap — add on server side
+// For now, if server doesn't support it, we just skip it gracefully
+</script>
+</body>
+</html>
